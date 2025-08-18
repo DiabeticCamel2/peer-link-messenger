@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
+import { ArrowLeft } from 'lucide-react';
 
 const signUpSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -21,12 +22,18 @@ const signInSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 });
 
+const resetPasswordSchema = z.object({
+  email: z.string().email('Invalid email address'),
+});
+
 type SignUpData = z.infer<typeof signUpSchema>;
 type SignInData = z.infer<typeof signInSchema>;
+type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 
 const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
-  const { user, signUp, signIn } = useAuth();
+  const [isResetPassword, setIsResetPassword] = useState(false);
+  const { user, signUp, signIn, resetPassword } = useAuth();
   const { toast } = useToast();
 
   const signUpForm = useForm<SignUpData>({
@@ -43,6 +50,13 @@ const Auth = () => {
     defaultValues: {
       email: '',
       password: '',
+    },
+  });
+
+  const resetPasswordForm = useForm<ResetPasswordData>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      email: '',
     },
   });
 
@@ -80,20 +94,77 @@ const Auth = () => {
     }
   };
 
+  const onResetPassword = async (data: ResetPasswordData) => {
+    const { error } = await resetPassword(data.email);
+    
+    if (error) {
+      toast({
+        title: 'Reset Password Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Reset Email Sent!',
+        description: 'Please check your email for password reset instructions.',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>{isSignUp ? 'Create Account' : 'Welcome Back'}</CardTitle>
+          <div className="flex items-center space-x-2">
+            {isResetPassword && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsResetPassword(false)}
+                className="p-0 h-auto"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <CardTitle>
+              {isResetPassword ? 'Reset Password' : isSignUp ? 'Create Account' : 'Welcome Back'}
+            </CardTitle>
+          </div>
           <CardDescription>
-            {isSignUp 
+            {isResetPassword
+              ? 'Enter your email to receive password reset instructions'
+              : isSignUp 
               ? 'Sign up to start messaging with your classmates'
               : 'Sign in to continue messaging'
             }
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isSignUp ? (
+          {isResetPassword ? (
+            <form onSubmit={resetPasswordForm.handleSubmit(onResetPassword)} className="space-y-4">
+              <div>
+                <Label htmlFor="reset-email">Email</Label>
+                <Input
+                  id="reset-email"
+                  type="email"
+                  {...resetPasswordForm.register('email')}
+                  placeholder="Enter your email"
+                />
+                {resetPasswordForm.formState.errors.email && (
+                  <p className="text-sm text-destructive mt-1">
+                    {resetPasswordForm.formState.errors.email.message}
+                  </p>
+                )}
+              </div>
+              <Button 
+                type="submit" 
+                className="w-full"
+                disabled={resetPasswordForm.formState.isSubmitting}
+              >
+                {resetPasswordForm.formState.isSubmitting ? 'Sending...' : 'Send Reset Email'}
+              </Button>
+            </form>
+          ) : isSignUp ? (
             <form onSubmit={signUpForm.handleSubmit(onSignUp)} className="space-y-4">
               <div>
                 <Label htmlFor="name">Full Name</Label>
@@ -184,17 +255,32 @@ const Auth = () => {
             </form>
           )}
           
-          <div className="mt-4 text-center">
-            <Button
-              variant="ghost"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm"
-            >
-              {isSignUp 
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Sign up"
-              }
-            </Button>
+          <div className="mt-4 text-center space-y-2">
+            {!isResetPassword && (
+              <>
+                <Button
+                  variant="ghost"
+                  onClick={() => setIsSignUp(!isSignUp)}
+                  className="text-sm"
+                >
+                  {isSignUp 
+                    ? 'Already have an account? Sign in'
+                    : "Don't have an account? Sign up"
+                  }
+                </Button>
+                {!isSignUp && (
+                  <div>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setIsResetPassword(true)}
+                      className="text-sm text-muted-foreground"
+                    >
+                      Forgot your password?
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </CardContent>
       </Card>

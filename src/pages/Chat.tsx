@@ -10,6 +10,7 @@ import { Send, Image, Smile, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
+import { GifPicker } from '@/components/GifPicker';
 
 interface Message {
   id: string;
@@ -149,6 +150,36 @@ const Chat = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  };
+
+  const sendGif = async (gifUrl: string) => {
+    if (!currentUser || !recipientId || sending) return;
+
+    setSending(true);
+    try {
+      const { error } = await supabase.functions.invoke('sanitize-message', {
+        body: {
+          message: {
+            sender_id: currentUser.id,
+            recipient_id: recipientId,
+            content: '',
+            media_url: gifUrl,
+            media_type: 'gif'
+          }
+        }
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error sending GIF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send GIF',
+        variant: 'destructive',
+      });
+    } finally {
+      setSending(false);
+    }
   };
 
   const sendMessage = async () => {
@@ -316,10 +347,10 @@ const Chat = () => {
                           : 'bg-muted text-muted-foreground'
                       }`}
                     >
-                      {message.media_type === 'image' && message.media_url && (
+                      {(message.media_type === 'image' || message.media_type === 'gif') && message.media_url && (
                         <img
                           src={message.media_url}
-                          alt="Shared image"
+                          alt={message.media_type === 'gif' ? 'GIF' : 'Shared image'}
                           className="rounded-lg mb-2 max-w-full h-auto"
                           style={{ maxHeight: '300px' }}
                         />
@@ -348,6 +379,7 @@ const Chat = () => {
               >
                 <Image className="h-4 w-4" />
               </Button>
+              <GifPicker onGifSelect={sendGif} />
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}

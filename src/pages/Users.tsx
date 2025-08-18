@@ -20,20 +20,27 @@ const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (!authLoading && currentUser) {
+      fetchUsers();
+    }
+  }, [authLoading, currentUser]);
 
   const fetchUsers = async () => {
+    if (!currentUser) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .neq('id', currentUser?.id); // Exclude current user
+        .neq('id', currentUser.id); // Exclude current user
 
       if (error) throw error;
       setUsers(data || []);
