@@ -1,1 +1,4 @@
 project_id = "xcugvjpmeigrxxrayjwm"
+
+[functions.sanitize-message]
+verify_jwt = true
