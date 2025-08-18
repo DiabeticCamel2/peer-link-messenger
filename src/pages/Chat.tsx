@@ -169,7 +169,19 @@ const Chat = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle privacy mode error specifically
+        if (error.message?.includes('Contact not allowed')) {
+          toast({
+            title: 'Cannot Send GIF',
+            description: 'This user requires a DM request first. Please send one from the Users page.',
+            variant: 'destructive',
+          });
+          navigate('/users');
+          return;
+        }
+        throw error;
+      }
     } catch (error) {
       console.error('Error sending GIF:', error);
       toast({
@@ -199,7 +211,19 @@ const Chat = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle privacy mode error specifically
+        if (error.message?.includes('Contact not allowed')) {
+          toast({
+            title: 'Cannot Send Message',
+            description: 'This user requires a DM request first. Please send one from the Users page.',
+            variant: 'destructive',
+          });
+          navigate('/users');
+          return;
+        }
+        throw error;
+      }
       
       setNewMessage('');
     } catch (error) {
@@ -268,7 +292,19 @@ const Chat = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle privacy mode error specifically
+        if (error.message?.includes('Contact not allowed')) {
+          toast({
+            title: 'Cannot Send Image',
+            description: 'This user requires a DM request first. Please send one from the Users page.',
+            variant: 'destructive',
+          });
+          navigate('/users');
+          return;
+        }
+        throw error;
+      }
 
     } catch (error) {
       console.error('Error uploading image:', error);

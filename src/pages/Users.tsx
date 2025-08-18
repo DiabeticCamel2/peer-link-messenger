@@ -14,6 +14,7 @@ interface User {
   name: string;
   email: string;
   avatar_url?: string;
+  privacy_mode?: boolean;
 }
 
 const Users = () => {
@@ -56,12 +57,76 @@ const Users = () => {
     }
   };
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const searchMatch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // If user has privacy mode, only show them if search term matches exact full name
+    if (user.privacy_mode && searchTerm) {
+      return user.name.toLowerCase() === searchTerm.toLowerCase();
+    }
+    
+    // If user has privacy mode but no search term, don't show them
+    if (user.privacy_mode && !searchTerm) {
+      return false;
+    }
+    
+    return searchMatch;
+  });
 
-  const handleStartChat = (userId: string) => {
+  const handleStartChat = async (userId: string) => {
+    // Check if recipient has privacy mode enabled
+    const recipient = users.find(u => u.id === userId);
+    if (recipient?.privacy_mode) {
+      // Check if they're already in allowed contacts
+      const user1_id = currentUser!.id < userId ? currentUser!.id : userId;
+      const user2_id = currentUser!.id < userId ? userId : currentUser!.id;
+      
+      const { data: allowedContact } = await supabase
+        .from('allowed_contacts')
+        .select('id')
+        .eq('user1_id', user1_id)
+        .eq('user2_id', user2_id)
+        .single();
+
+      if (!allowedContact) {
+        // Send DM request
+        try {
+          const { error } = await supabase.functions.invoke('dm-request', {
+            body: {
+              action: 'send',
+              sender_id: currentUser!.id,
+              recipient_id: userId
+            }
+          });
+
+          if (error) throw error;
+
+          toast({
+            title: 'DM Request Sent',
+            description: `DM request sent to ${recipient.name}. Wait for their response.`,
+          });
+        } catch (error: any) {
+          console.error('Error sending DM request:', error);
+          if (error.message?.includes('duplicate key')) {
+            toast({
+              title: 'Already Requested',
+              description: 'You already sent a DM request to this user.',
+              variant: 'destructive',
+            });
+          } else {
+            toast({
+              title: 'Error',
+              description: 'Failed to send DM request',
+              variant: 'destructive',
+            });
+          }
+        }
+        return;
+      }
+    }
+    
+    // Normal chat flow
     navigate(`/chat?recipient=${userId}`);
   };
 
@@ -88,7 +153,7 @@ const Users = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search students..."
+              placeholder="Search students... (use full name for private users)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -125,7 +190,7 @@ const Users = () => {
                     className="flex items-center space-x-2"
                   >
                     <MessageCircle className="h-4 w-4" />
-                    <span>Chat</span>
+                    <span>{user.privacy_mode ? 'Request' : 'Chat'}</span>
                   </Button>
                 </div>
               ))

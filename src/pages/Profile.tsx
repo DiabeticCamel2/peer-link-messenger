@@ -4,7 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { Camera, Save, Shield, Filter, Bell, Settings } from 'lucide-react';
+import Notifications from '@/components/Notifications';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -24,6 +27,8 @@ interface UserProfile {
   name: string;
   email: string;
   avatar_url?: string;
+  profanity_filter_enabled: boolean;
+  privacy_mode: boolean;
 }
 
 const Profile = () => {
@@ -31,6 +36,7 @@ const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'profile' | 'settings' | 'notifications'>('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileData>({
@@ -165,6 +171,32 @@ const Profile = () => {
     }
   };
 
+  const updateSetting = async (field: 'profanity_filter_enabled' | 'privacy_mode', value: boolean) => {
+    if (!user || !profile) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ [field]: value })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      setProfile({ ...profile, [field]: value });
+      toast({
+        title: 'Success',
+        description: 'Settings updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating settings:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update settings',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (!profile) {
     return (
       <div className="container mx-auto p-4">
@@ -178,14 +210,46 @@ const Profile = () => {
 
   return (
     <div className="container mx-auto p-4 max-w-2xl">
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-          <CardDescription>
-            Update your profile information and avatar
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 mb-6 bg-muted p-1 rounded-lg">
+        <Button
+          variant={activeTab === 'profile' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('profile')}
+          className="flex-1"
+        >
+          <Settings className="h-4 w-4 mr-2" />
+          Profile
+        </Button>
+        <Button
+          variant={activeTab === 'settings' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('settings')}
+          className="flex-1"
+        >
+          <Shield className="h-4 w-4 mr-2" />
+          Privacy & Safety
+        </Button>
+        <Button
+          variant={activeTab === 'notifications' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('notifications')}
+          className="flex-1"
+        >
+          <Bell className="h-4 w-4 mr-2" />
+          Notifications
+        </Button>
+      </div>
+
+      {activeTab === 'profile' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile Settings</CardTitle>
+            <CardDescription>
+              Update your profile information and avatar
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
           {/* Avatar Section */}
           <div className="flex flex-col items-center space-y-4">
             <div className="relative">
@@ -258,7 +322,62 @@ const Profile = () => {
             </Button>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+      )}
+
+      {activeTab === 'settings' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Privacy & Safety Settings</CardTitle>
+            <CardDescription>
+              Control your privacy and content filtering preferences
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Profanity Filter</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Filter inappropriate language from your outgoing messages
+                  </p>
+                </div>
+                <Switch
+                  checked={profile.profanity_filter_enabled}
+                  onCheckedChange={(checked) => updateSetting('profanity_filter_enabled', checked)}
+                />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Privacy Mode</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Hide from user search and require DM requests to message you
+                  </p>
+                </div>
+                <Switch
+                  checked={profile.privacy_mode}
+                  onCheckedChange={(checked) => updateSetting('privacy_mode', checked)}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === 'notifications' && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>
+              Manage your DM requests and other notifications
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Notifications />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

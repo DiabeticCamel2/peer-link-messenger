@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.search-gifs]
 verify_jwt = true
+
+[functions.dm-request]
+verify_jwt = true

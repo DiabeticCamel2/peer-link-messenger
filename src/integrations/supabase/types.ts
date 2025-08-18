@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      allowed_contacts: {
+        Row: {
+          created_at: string
+          id: string
+          user1_id: string
+          user2_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user1_id: string
+          user2_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user1_id?: string
+          user2_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "allowed_contacts_user1_id_fkey"
+            columns: ["user1_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "allowed_contacts_user2_id_fkey"
+            columns: ["user2_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dm_requests: {
+        Row: {
+          created_at: string
+          id: string
+          recipient_id: string
+          sender_id: string
+          status: Database["public"]["Enums"]["dm_request_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+          status?: Database["public"]["Enums"]["dm_request_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          status?: Database["public"]["Enums"]["dm_request_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dm_requests_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dm_requests_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
@@ -66,6 +144,8 @@ export type Database = {
           email: string
           id: string
           name: string
+          privacy_mode: boolean | null
+          profanity_filter_enabled: boolean | null
           updated_at: string
         }
         Insert: {
@@ -74,6 +154,8 @@ export type Database = {
           email: string
           id: string
           name: string
+          privacy_mode?: boolean | null
+          profanity_filter_enabled?: boolean | null
           updated_at?: string
         }
         Update: {
@@ -82,6 +164,8 @@ export type Database = {
           email?: string
           id?: string
           name?: string
+          privacy_mode?: boolean | null
+          profanity_filter_enabled?: boolean | null
           updated_at?: string
         }
         Relationships: []
@@ -94,7 +178,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      dm_request_status: "pending" | "accepted" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -221,6 +305,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      dm_request_status: ["pending", "accepted", "rejected"],
+    },
   },
 } as const

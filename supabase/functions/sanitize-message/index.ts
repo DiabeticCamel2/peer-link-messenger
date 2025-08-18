@@ -25,12 +25,64 @@ serve(async (req) => {
     const { message } = await req.json();
     const { sender_id, recipient_id, content, media_url, media_type } = message;
 
-    // Simple profanity filter - replace bad words with asterisks
+    // Check if sender has profanity filter enabled
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('profanity_filter_enabled')
+      .eq('id', sender_id)
+      .single();
+
+    if (userError) {
+      console.error('Error fetching user settings:', userError);
+      return new Response(JSON.stringify({ error: 'Failed to fetch user settings' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Apply profanity filter only if user has it enabled
     let filteredContent = content || '';
-    profanityFilter.forEach(word => {
-      const regex = new RegExp(word, 'gi');
-      filteredContent = filteredContent.replace(regex, '*'.repeat(word.length));
-    });
+    if (userData.profanity_filter_enabled) {
+      profanityFilter.forEach(word => {
+        const regex = new RegExp(word, 'gi');
+        filteredContent = filteredContent.replace(regex, '*'.repeat(word.length));
+      });
+    }
+
+    // Check if users are allowed to message each other (privacy mode handling)
+    const { data: recipientData, error: recipientError } = await supabase
+      .from('users')
+      .select('privacy_mode')
+      .eq('id', recipient_id)
+      .single();
+
+    if (recipientError) {
+      console.error('Error fetching recipient settings:', recipientError);
+      return new Response(JSON.stringify({ error: 'Failed to fetch recipient settings' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // If recipient has privacy mode enabled, check if contact is allowed
+    if (recipientData.privacy_mode) {
+      const user1_id = sender_id < recipient_id ? sender_id : recipient_id;
+      const user2_id = sender_id < recipient_id ? recipient_id : sender_id;
+      
+      const { data: allowedContact } = await supabase
+        .from('allowed_contacts')
+        .select('id')
+        .eq('user1_id', user1_id)
+        .eq('user2_id', user2_id)
+        .single();
+
+      if (!allowedContact) {
+        return new Response(JSON.stringify({ error: 'Contact not allowed. Send a DM request first.' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
 
     // Insert sanitized message into database
     const { data, error } = await supabase
