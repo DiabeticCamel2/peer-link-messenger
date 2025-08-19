@@ -15,12 +15,14 @@ interface User {
   email: string;
   avatar_url?: string;
   privacy_mode?: boolean;
+  request_status?: 'none' | 'pending' | 'sent';
 }
 
 const Users = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
   const { user: currentUser, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -28,6 +30,7 @@ const Users = () => {
   useEffect(() => {
     if (!authLoading && currentUser) {
       fetchUsers();
+      fetchPendingRequests();
     }
   }, [authLoading, currentUser]);
 
@@ -54,6 +57,25 @@ const Users = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPendingRequests = async () => {
+    if (!currentUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('dm_requests')
+        .select('recipient_id')
+        .eq('sender_id', currentUser.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      
+      const pendingIds = new Set(data.map(req => req.recipient_id));
+      setPendingRequests(pendingIds);
+    } catch (error) {
+      console.error('Error fetching pending requests:', error);
     }
   };
 
@@ -106,13 +128,15 @@ const Users = () => {
             title: 'DM Request Sent',
             description: `DM request sent to ${recipient.name}. Wait for their response.`,
           });
+          
+          // Add to pending requests
+          setPendingRequests(prev => new Set([...prev, userId]));
         } catch (error: any) {
           console.error('Error sending DM request:', error);
-          if (error.message?.includes('duplicate key')) {
+          if (error.message?.includes('DM request already sent')) {
             toast({
-              title: 'Already Requested',
+              title: 'Request Already Sent',
               description: 'You already sent a DM request to this user.',
-              variant: 'destructive',
             });
           } else {
             toast({
@@ -188,9 +212,18 @@ const Users = () => {
                     size="sm"
                     onClick={() => handleStartChat(user.id)}
                     className="flex items-center space-x-2"
+                    disabled={user.privacy_mode && pendingRequests.has(user.id)}
+                    variant={user.privacy_mode && pendingRequests.has(user.id) ? "secondary" : "default"}
                   >
                     <MessageCircle className="h-4 w-4" />
-                    <span>{user.privacy_mode ? 'Request' : 'Chat'}</span>
+                    <span>
+                      {user.privacy_mode 
+                        ? pendingRequests.has(user.id) 
+                          ? 'Sent' 
+                          : 'Request'
+                        : 'Chat'
+                      }
+                    </span>
                   </Button>
                 </div>
               ))

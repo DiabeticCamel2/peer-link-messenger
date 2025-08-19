@@ -86,7 +86,7 @@ const Notifications = () => {
 
   const handleRequestResponse = async (requestId: string, status: 'accepted' | 'rejected') => {
     try {
-      const { error } = await supabase.functions.invoke('dm-request', {
+      const { data, error } = await supabase.functions.invoke('dm-request', {
         body: {
           action: 'respond',
           request_id: requestId,
@@ -94,7 +94,10 @@ const Notifications = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('DM request response error:', error);
+        throw error;
+      }
 
       // Remove from pending requests
       setRequests(prev => prev.filter(req => req.id !== requestId));
@@ -103,11 +106,11 @@ const Notifications = () => {
         title: 'Success',
         description: status === 'accepted' ? 'DM request accepted' : 'DM request rejected',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error responding to DM request:', error);
       toast({
         title: 'Error',
-        description: 'Failed to respond to request',
+        description: error.message || 'Failed to respond to request',
         variant: 'destructive',
       });
     }

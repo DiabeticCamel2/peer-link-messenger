@@ -17,7 +17,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, sender_id, recipient_id, request_id } = await req.json();
+    const { action, sender_id, recipient_id, request_id, status } = await req.json();
 
     if (action === 'send') {
       // Send a DM request
@@ -33,6 +33,15 @@ serve(async (req) => {
 
       if (error) {
         console.error('Error sending DM request:', error);
+        
+        // Handle duplicate request
+        if (error.code === '23505') {
+          return new Response(JSON.stringify({ error: 'DM request already sent' }), {
+            status: 409,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        
         return new Response(JSON.stringify({ error: error.message }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -45,7 +54,6 @@ serve(async (req) => {
     }
 
     if (action === 'respond') {
-      const { status } = await req.json();
       
       // Update DM request status (accept/reject)
       const { data, error } = await supabase
