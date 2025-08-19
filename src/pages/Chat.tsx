@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, Image, Smile, ArrowLeft } from 'lucide-react';
+import { Send, Image, Smile, ArrowLeft, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
@@ -49,14 +49,11 @@ const Chat = () => {
   const recipientId = searchParams.get('recipient');
 
   useEffect(() => {
-    if (!recipientId) {
-      navigate('/users');
-      return;
+    if (recipientId) {
+      fetchRecipient();
+      fetchMessages();
+      setupRealtime();
     }
-
-    fetchRecipient();
-    fetchMessages();
-    setupRealtime();
   }, [recipientId]);
 
   useEffect(() => {
@@ -327,6 +324,25 @@ const Chat = () => {
       sendMessage();
     }
   };
+
+  if (!recipientId) {
+    return (
+      <div className="container mx-auto p-4 max-w-4xl">
+        <Card className="h-[600px] flex flex-col items-center justify-center">
+          <CardContent className="text-center">
+            <MessageCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-2xl font-semibold mb-2">Select a user to chat with</h2>
+            <p className="text-muted-foreground mb-6">
+              Choose someone from the users list to start a conversation
+            </p>
+            <Button onClick={() => navigate('/users')}>
+              Browse Users
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (loading || !recipient) {
     return (
