@@ -36,18 +36,32 @@ const Notifications = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data: dmRequests, error } = await supabase
         .from('dm_requests')
-        .select(`
-          *,
-          sender:users!dm_requests_sender_id_fkey(name, avatar_url)
-        `)
+        .select('*')
         .eq('recipient_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setRequests(data || []);
+
+      // Get sender info for each request
+      const requestsWithSenders = await Promise.all(
+        (dmRequests || []).map(async (request) => {
+          const { data: sender } = await supabase
+            .from('users')
+            .select('name, avatar_url')
+            .eq('id', request.sender_id)
+            .single();
+          
+          return {
+            ...request,
+            sender
+          };
+        })
+      );
+
+      setRequests(requestsWithSenders);
     } catch (error) {
       console.error('Error fetching DM requests:', error);
       toast({
