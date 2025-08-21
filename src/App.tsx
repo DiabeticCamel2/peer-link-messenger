@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/use-auth";
+import { NotificationsProvider } from "./context/NotificationsContext";
 import Navigation from "@/components/Navigation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
@@ -30,10 +31,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navigation />
-      <main>{children}</main>
-    </div>
+    <NotificationsProvider>
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <main>{children}</main>
+      </div>
+    </NotificationsProvider>
   );
 };
 

@@ -10,12 +10,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/context/NotificationsContext';
 
 const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const { count } = useNotifications();
 
   const handleSignOut = async () => {
     const { error } = await signOut();
@@ -65,10 +67,15 @@ const Navigation = () => {
                   <Button
                     variant={location.pathname === item.path ? 'default' : 'ghost'}
                     size="sm"
-                    className="flex items-center space-x-2"
+                    className="flex items-center space-x-2 relative"
                   >
                     <Icon className="h-4 w-4" />
                     <span>{item.label}</span>
+                    {item.label === 'Notifications' && count > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                        {count}
+                      </span>
+                    )}
                   </Button>
                 </Link>
               );
@@ -108,10 +115,14 @@ const Navigation = () => {
                   <Button
                     variant={location.pathname === item.path ? 'default' : 'ghost'}
                     size="sm"
-                    className="flex flex-col items-center space-y-1"
+                    className="flex flex-col items-center space-y-1 relative"
                   >
                     <Icon className="h-4 w-4" />
                     <span className="text-xs">{item.label}</span>
+                    {item.label === 'Notifications' && count > 0 && (
+                      <span className="absolute top-0 right-0 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-xs text-white">
+                      </span>
+                    )}
                   </Button>
                 </Link>
               );
