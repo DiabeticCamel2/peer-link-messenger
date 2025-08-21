@@ -1,6 +1,6 @@
 -- Add new fields to users table
 ALTER TABLE public.users 
-ADD COLUMN profanity_filter_enabled BOOLEAN DEFAULT true,
+ADD COLUMN profanity_filter_enabled BOOLEAN DEFAULT false,
 ADD COLUMN privacy_mode BOOLEAN DEFAULT false;
 
 -- Create enum for DM request status

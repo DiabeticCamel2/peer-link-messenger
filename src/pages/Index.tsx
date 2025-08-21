@@ -80,7 +80,7 @@ const Index = () => {
           <div className="bg-card p-4 rounded-lg border border-border">
             <h3 className="font-medium mb-2 text-card-foreground">Message Filtering</h3>
             <p className="text-sm text-muted-foreground">
-              All messages are automatically scanned and inappropriate content is filtered out.
+              Inappropriate content can be filtered from messages. This can be toggled in your profile settings.
             </p>
           </div>
           <div className="bg-card p-4 rounded-lg border border-border">
