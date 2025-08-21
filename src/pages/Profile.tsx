@@ -36,6 +36,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [uploading, setUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
+  const [notificationPermission, setNotificationPermission] = useState(Notification.permission);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileData>({
@@ -71,6 +72,41 @@ const Profile = () => {
         title: 'Error',
         description: 'Failed to load profile',
         variant: 'destructive',
+      });
+    }
+  };
+
+  const handleNotificationPermission = async () => {
+    if (Notification.permission === 'granted') {
+      toast({
+        title: 'Permissions',
+        description: 'Browser notifications are already enabled.',
+      });
+      return;
+    }
+
+    if (Notification.permission === 'denied') {
+      toast({
+        title: 'Permissions Denied',
+        description: 'You have previously denied notification permissions. Please enable them in your browser settings.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+
+    if (permission === 'granted') {
+      toast({
+        title: 'Success',
+        description: 'Browser notifications have been enabled.',
+      });
+    } else {
+      toast({
+        title: 'Permissions',
+        description: 'You have not enabled browser notifications.',
+        variant: 'destructive'
       });
     }
   };
@@ -349,6 +385,22 @@ const Profile = () => {
                   checked={profile.privacy_mode}
                   onCheckedChange={(checked) => updateSetting('privacy_mode', checked)}
                 />
+              </div>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-base">Browser Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Enable browser notifications for new DM requests.
+                  </p>
+                </div>
+                <Button
+                  onClick={handleNotificationPermission}
+                  disabled={notificationPermission === 'granted'}
+                  size="sm"
+                >
+                  {notificationPermission === 'granted' ? 'Enabled' : 'Enable'}
+                </Button>
               </div>
             </div>
           </CardContent>
