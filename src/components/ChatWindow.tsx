@@ -274,7 +274,7 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
         )}
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col p-0">
+      <CardContent className="flex-1 flex flex-col p-0 min-h-0">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {loading ? (
