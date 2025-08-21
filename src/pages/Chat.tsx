@@ -44,6 +44,7 @@ const Chat = () => {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
 
+
   // Effect to fetch initial data and set up subscriptions
   useEffect(() => {
     if (!recipientId || !currentUser) {
@@ -53,8 +54,6 @@ const Chat = () => {
 
     const fetchData = async () => {
       setLoading(true);
-      console.log('Loading conversation for recipient:', recipientId);
-
       try {
         // 1. Fetch recipient details
         const { data: recipientData, error: recipientError } = await supabase
@@ -73,31 +72,54 @@ const Chat = () => {
           throw recipientError;
         }
         setRecipient(recipientData);
-        console.log('Recipient loaded:', recipientData);
 
-        // 2. Fetch messages
-        console.log('Loading messages for conversation:', currentUser.id, recipientId);
-        const { data: messagesData, error: messagesError } = await supabase
+        // 2. Fetch messages using the dual-query approach
+        const { data: sentMessages, error: sentError } = await supabase
           .from('messages')
-          .select('*, sender:sender_id(id, name, avatar_url)')
-          .or(`(sender_id.eq.${currentUser.id},recipient_id.eq.${recipientId}),(sender_id.eq.${recipientId},recipient_id.eq.${currentUser.id})`)
-          .order('created_at', { ascending: true });
+          .select('*')
+          .eq('sender_id', currentUser.id)
+          .eq('recipient_id', recipientId);
 
-        if (messagesError) {
-          console.error('Error fetching messages:', messagesError);
+        const { data: receivedMessages, error: receivedError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('sender_id', recipientId)
+          .eq('recipient_id', currentUser.id);
+
+        if (sentError || receivedError) {
+          console.error('Message loading error:', { sentError, receivedError });
           toast({
             title: 'Error',
             description: 'Failed to load messages.',
             variant: 'destructive',
           });
-          throw messagesError;
+          throw sentError || receivedError;
         }
 
-        setMessages(messagesData as any);
-        console.log('Messages query result:', { data: messagesData, error: messagesError });
+        const allMessages = [...(sentMessages || []), ...(receivedMessages || [])];
+
+        // Manually add sender info
+        const usersMap = {
+          [currentUser.id]: {
+            id: currentUser.id,
+            name: currentUser.user_metadata.name || 'You',
+            avatar_url: currentUser.user_metadata.avatar_url,
+          },
+          [recipientData.id]: recipientData,
+        };
+
+        const messagesWithSenders = allMessages.map(msg => ({
+          ...msg,
+          sender: usersMap[msg.sender_id],
+        }));
+
+        // Sort messages
+        messagesWithSenders.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+        setMessages(messagesWithSenders as any);
 
       } catch (error) {
-        // Error is already logged and toasted inside the try block
+        console.error('Failed to fetch conversation data:', error);
       } finally {
         setLoading(false);
       }
@@ -169,14 +191,13 @@ const Chat = () => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !currentUser || !recipientId) return;
+    const messageContent = newMessage.trim();
+    if (!messageContent || !currentUser || !recipientId) return;
 
     const optimisticId = `optimistic-${Date.now()}`;
-    // The 'sender' object needs to be constructed based on what we know about the current user.
-    // The Message type expects a `sender` property.
     const optimisticMessage: Message = {
       id: optimisticId,
-      content: newMessage.trim(),
+      content: messageContent,
       created_at: new Date().toISOString(),
       sender_id: currentUser.id,
       recipient_id: recipientId,
@@ -191,38 +212,33 @@ const Chat = () => {
     setMessages(prevMessages => [...prevMessages, optimisticMessage]);
     setNewMessage('');
 
-    console.log('Sending message:', optimisticMessage.content);
-
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
         .insert({
           sender_id: currentUser.id,
           recipient_id: recipientId,
-          content: optimisticMessage.content,
-          media_type: 'none',
-        })
-        .select('*, sender:sender_id(id, name, avatar_url)')
-        .single();
+          content: messageContent,
+          media_type: 'text',
+        });
 
       if (error) {
-        throw error;
+        console.error('Message send error:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to send message. Please try again.',
+          variant: 'destructive',
+        });
+        // Rollback the optimistic update
+        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== optimisticId));
       }
-
-      console.log('Message sent successfully:', data);
-      // Replace optimistic message with the real one from the database
-      setMessages(prevMessages =>
-        prevMessages.map(msg => (msg.id === optimisticId ? (data as any) : msg))
-      );
-
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Message send exception:', error);
       toast({
         title: 'Error',
-        description: 'Failed to send message. Please try again.',
+        description: 'An unexpected error occurred.',
         variant: 'destructive',
       });
-      // Rollback: remove the optimistic message
       setMessages(prevMessages => prevMessages.filter(msg => msg.id !== optimisticId));
     } finally {
       setSending(false);
