@@ -7,7 +7,6 @@ import { useAuth } from "@/hooks/use-auth";
 import Navigation from "@/components/Navigation";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Chat from "./pages/Chat";
 import Users from "./pages/Users";
 import Profile from "./pages/Profile";
 import NotificationsPage from "./pages/Notifications";
@@ -49,11 +48,6 @@ const App = () => (
           <Route path="/" element={
             <ProtectedRoute>
               <Index />
-            </ProtectedRoute>
-          } />
-          <Route path="/chat" element={
-            <ProtectedRoute>
-              <Chat />
             </ProtectedRoute>
           } />
           <Route path="/users" element={

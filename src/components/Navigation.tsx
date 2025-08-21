@@ -32,11 +32,6 @@ const Navigation = () => {
 
   const navItems = [
     {
-      path: '/chat',
-      label: 'Chat',
-      icon: MessageCircle,
-    },
-    {
       path: '/users',
       label: 'Users',
       icon: Users,
