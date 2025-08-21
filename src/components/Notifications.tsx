@@ -90,10 +90,14 @@ const Notifications = () => {
 
   if (notifications.length === 0) {
     return (
-      <div className="text-center py-8">
-        <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-        <p className="text-muted-foreground">No pending notifications</p>
-      </div>
+      <Card>
+        <CardContent className="py-8">
+          <div className="text-center">
+            <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No pending notifications</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
