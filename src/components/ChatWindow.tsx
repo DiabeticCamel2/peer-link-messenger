@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/context/NotificationsContext';
 import { formatDistanceToNow } from 'date-fns';
 
 // Define types for better readability and safety
@@ -37,6 +38,7 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { toast } = useToast();
+  const { setActiveChatRecipientId } = useNotifications();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -192,6 +194,14 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Effect to set the active chat recipient
+  useEffect(() => {
+    setActiveChatRecipientId(recipientId);
+    return () => {
+      setActiveChatRecipientId(null);
+    };
+  }, [recipientId, setActiveChatRecipientId]);
 
   const handleSendMessage = async () => {
     const messageContent = newMessage.trim();
