@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import ChatWindow from '@/components/ChatWindow';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,8 +23,8 @@ const Users = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [pendingRequests, setPendingRequests] = useState<Set<string>>(new Set());
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { user: currentUser, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -151,7 +151,7 @@ const Users = () => {
     }
     
     // Normal chat flow
-    navigate(`/chat?recipient=${userId}`);
+    setSelectedUserId(userId);
   };
 
   if (loading) {
@@ -162,6 +162,17 @@ const Users = () => {
             <div key={i} className="h-16 bg-muted rounded-lg"></div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (selectedUserId) {
+    return (
+      <div className="container mx-auto p-4 max-w-4xl">
+        <ChatWindow
+          recipientId={selectedUserId}
+          onBack={() => setSelectedUserId(null)}
+        />
       </div>
     );
   }
