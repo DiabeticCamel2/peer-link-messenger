@@ -6,8 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { Camera, Save, Shield, Filter, Bell, Settings } from 'lucide-react';
-import Notifications from '@/components/Notifications';
+import { Camera, Save, Shield, Filter, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -36,7 +35,7 @@ const Profile = () => {
   const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'settings' | 'notifications'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'settings'>('profile');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const form = useForm<ProfileData>({
@@ -230,15 +229,6 @@ const Profile = () => {
           <Shield className="h-4 w-4 mr-2" />
           Privacy & Safety
         </Button>
-        <Button
-          variant={activeTab === 'notifications' ? 'default' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('notifications')}
-          className="flex-1"
-        >
-          <Bell className="h-4 w-4 mr-2" />
-          Notifications
-        </Button>
       </div>
 
       {activeTab === 'profile' && (
@@ -361,20 +351,6 @@ const Profile = () => {
                 />
               </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {activeTab === 'notifications' && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              Manage your DM requests and other notifications
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Notifications />
           </CardContent>
         </Card>
       )}
