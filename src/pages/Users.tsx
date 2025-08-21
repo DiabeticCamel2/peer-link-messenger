@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import ChatWindow from '@/components/ChatWindow';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,6 +27,17 @@ const Users = () => {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const { user: currentUser, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const chatWith = searchParams.get('chatWith');
+    if (chatWith) {
+      setSelectedUserId(chatWith);
+      // Optional: remove the query param after reading it
+      searchParams.delete('chatWith');
+      setSearchParams(searchParams);
+    }
+  }, [searchParams, setSearchParams]);
 
   useEffect(() => {
     if (!authLoading && currentUser) {
