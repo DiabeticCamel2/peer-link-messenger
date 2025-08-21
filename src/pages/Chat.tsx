@@ -89,18 +89,40 @@ const Chat = () => {
   const fetchMessages = async () => {
     if (!recipientId || !currentUser) return;
 
+    console.log('Fetching messages for conversation:', { currentUser: currentUser.id, recipientId });
+
     try {
+      // Fetch messages between current user and recipient
       const { data, error } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:users!messages_sender_id_fkey(name, avatar_url)
-        `)
+        .select('*')
         .or(`and(sender_id.eq.${currentUser.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentUser.id})`)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setMessages(data || []);
+      if (error) {
+        console.error('Messages query error:', error);
+        throw error;
+      }
+
+      console.log('Fetched messages:', data);
+      
+      // Get sender info for each message
+      const messagesWithSenders = await Promise.all(
+        (data || []).map(async (message) => {
+          const { data: sender } = await supabase
+            .from('users')
+            .select('name, avatar_url')
+            .eq('id', message.sender_id)
+            .single();
+          
+          return {
+            ...message,
+            sender
+          };
+        })
+      );
+
+      setMessages(messagesWithSenders);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -116,29 +138,40 @@ const Chat = () => {
   const setupRealtime = () => {
     if (!currentUser || !recipientId) return;
 
+    console.log('Setting up realtime for conversation:', { currentUser: currentUser.id, recipientId });
+
     const channel = supabase
-      .channel('messages')
+      .channel(`messages-${currentUser.id}-${recipientId}`)
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'messages',
-          filter: `or(and(sender_id.eq.${currentUser.id},recipient_id.eq.${recipientId}),and(sender_id.eq.${recipientId},recipient_id.eq.${currentUser.id}))`
+          table: 'messages'
         },
         async (payload) => {
-          // Fetch the full message with sender info
-          const { data } = await supabase
-            .from('messages')
-            .select(`
-              *,
-              sender:users!messages_sender_id_fkey(name, avatar_url)
-            `)
-            .eq('id', payload.new.id)
-            .single();
+          console.log('New message received via realtime:', payload);
+          
+          const newMessage = payload.new as any;
+          
+          // Only process messages for this conversation
+          if (
+            (newMessage.sender_id === currentUser.id && newMessage.recipient_id === recipientId) ||
+            (newMessage.sender_id === recipientId && newMessage.recipient_id === currentUser.id)
+          ) {
+            // Get sender info
+            const { data: sender } = await supabase
+              .from('users')
+              .select('name, avatar_url')
+              .eq('id', newMessage.sender_id)
+              .single();
 
-          if (data) {
-            setMessages(prev => [...prev, data]);
+            const messageWithSender = {
+              ...newMessage,
+              sender
+            };
+
+            setMessages(prev => [...prev, messageWithSender]);
           }
         }
       )

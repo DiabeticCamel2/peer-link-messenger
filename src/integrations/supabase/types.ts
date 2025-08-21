@@ -101,6 +101,7 @@ export type Database = {
           media_url: string | null
           recipient_id: string
           sender_id: string
+          updated_at: string
         }
         Insert: {
           content?: string | null
@@ -110,6 +111,7 @@ export type Database = {
           media_url?: string | null
           recipient_id: string
           sender_id: string
+          updated_at?: string
         }
         Update: {
           content?: string | null
@@ -119,23 +121,9 @@ export type Database = {
           media_url?: string | null
           recipient_id?: string
           sender_id?: string
+          updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "messages_recipient_id_fkey"
-            columns: ["recipient_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "messages_sender_id_fkey"
-            columns: ["sender_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       users: {
         Row: {

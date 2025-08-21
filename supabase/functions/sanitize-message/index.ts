@@ -25,6 +25,8 @@ serve(async (req) => {
     const { message } = await req.json();
     const { sender_id, recipient_id, content, media_url, media_type } = message;
 
+    console.log('Processing message:', { sender_id, recipient_id, content: content ? 'has content' : 'no content', media_type });
+
     // Check if sender has profanity filter enabled
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -43,6 +45,7 @@ serve(async (req) => {
     // Apply profanity filter only if user has it enabled
     let filteredContent = content || '';
     if (userData.profanity_filter_enabled) {
+      console.log('Applying profanity filter');
       profanityFilter.forEach(word => {
         const regex = new RegExp(word, 'gi');
         filteredContent = filteredContent.replace(regex, '*'.repeat(word.length));
@@ -66,6 +69,7 @@ serve(async (req) => {
 
     // If recipient has privacy mode enabled, check if contact is allowed
     if (recipientData.privacy_mode) {
+      console.log('Checking privacy mode for recipient');
       const user1_id = sender_id < recipient_id ? sender_id : recipient_id;
       const user2_id = sender_id < recipient_id ? recipient_id : sender_id;
       
@@ -77,6 +81,7 @@ serve(async (req) => {
         .single();
 
       if (!allowedContact) {
+        console.log('Contact not allowed - privacy mode active');
         return new Response(JSON.stringify({ error: 'Contact not allowed. Send a DM request first.' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -85,15 +90,19 @@ serve(async (req) => {
     }
 
     // Insert sanitized message into database
+    const messageData = {
+      sender_id,
+      recipient_id,
+      content: filteredContent,
+      media_url: media_url || null,
+      media_type: media_type || 'text'
+    };
+    
+    console.log('Inserting message:', messageData);
+    
     const { data, error } = await supabase
       .from('messages')
-      .insert({
-        sender_id,
-        recipient_id,
-        content: filteredContent,
-        media_url: media_url || null,
-        media_type: media_type || 'none'
-      })
+      .insert(messageData)
       .select()
       .single();
 
@@ -105,6 +114,7 @@ serve(async (req) => {
       });
     }
 
+    console.log('Message inserted successfully:', data);
     return new Response(JSON.stringify({ data }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
