@@ -15,11 +15,20 @@ interface DmRequest {
   };
 }
 
+interface Message {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  created_at: string;
+}
+
 interface NotificationsContextType {
   requests: DmRequest[];
   count: number;
   loading: boolean;
   respondToRequest: (requestId: string, status: 'accepted' | 'rejected') => Promise<void>;
+  setActiveChatRecipientId: (id: string | null) => void;
 }
 
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
@@ -29,6 +38,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
   const { toast } = useToast();
   const [requests, setRequests] = useState<DmRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeChatRecipientId, setActiveChatRecipientId] = useState<string | null>(null);
 
   const fetchPendingRequests = useCallback(async () => {
     if (!user) return;
@@ -106,6 +116,46 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     };
   }, [user, fetchPendingRequests]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('messages_realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          if (newMessage.sender_id !== activeChatRecipientId) {
+            // Fetch sender info for the notification
+            supabase
+              .from('users')
+              .select('name, avatar_url')
+              .eq('id', newMessage.sender_id)
+              .single()
+              .then(({ data: sender }) => {
+                if (sender && Notification.permission === 'granted') {
+                  new Notification(`New message from ${sender.name}`, {
+                    body: newMessage.content,
+                    icon: sender.avatar_url,
+                  });
+                }
+              });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, activeChatRecipientId]);
+
   const respondToRequest = async (requestId: string, status: 'accepted' | 'rejected') => {
     try {
       const { error } = await supabase.functions.invoke('dm-request', {
@@ -138,6 +188,7 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     count: requests.length,
     loading,
     respondToRequest,
+    setActiveChatRecipientId,
   };
 
   return (
