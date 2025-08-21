@@ -8,6 +8,7 @@ const corsHeaders = {
 
 const profanityFilter = [
   'damn', 'hell', 'stupid', 'dumb', 'idiot', 'hate', 'kill', 'die',
+  'crap', 'poop', 'butt', 'heck'
   // Add more words as needed for school environment
 ];
 

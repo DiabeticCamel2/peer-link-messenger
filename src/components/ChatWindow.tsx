@@ -226,14 +226,15 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
     setNewMessage('');
 
     try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          sender_id: currentUser.id,
-          recipient_id: recipientId,
-          content: messageContent,
-          media_type: 'text',
-        });
+      const { error } = await supabase.functions.invoke('sanitize-message', {
+        body: {
+          message: {
+            sender_id: currentUser.id,
+            recipient_id: recipientId,
+            content: messageContent,
+          },
+        },
+      });
 
       if (error) {
         console.error('Message send error:', error);
