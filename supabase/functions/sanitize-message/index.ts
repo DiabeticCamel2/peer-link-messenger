@@ -28,11 +28,11 @@ serve(async (req) => {
 
     console.log('Processing message:', { sender_id, recipient_id, content: content ? 'has content' : 'no content', media_type });
 
-    // Check if sender has profanity filter enabled
+    // Check if recipient has profanity filter enabled
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('profanity_filter_enabled')
-      .eq('id', sender_id)
+      .eq('id', recipient_id)
       .single();
 
     if (userError) {
