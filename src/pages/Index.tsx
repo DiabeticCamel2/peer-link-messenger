@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { MessageCircle, Users, Settings } from 'lucide-react';
+import { Users, Bell, Settings } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 
 const Index = () => {
@@ -12,7 +12,7 @@ const Index = () => {
       <div className="text-center mb-8">
         <h1 className="text-4xl font-bold mb-4 text-foreground">Welcome to SchoolChat</h1>
         <p className="text-xl text-muted-foreground">
-          Safe messaging platform for students
+          A safe and secure messaging platform for students.
         </p>
         {user && (
           <p className="text-lg text-muted-foreground mt-2">
@@ -25,16 +25,16 @@ const Index = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <MessageCircle className="h-6 w-6 text-primary" />
-              <span>Start Chatting</span>
+              <Users className="h-6 w-6 text-primary" />
+              <span>Find Students</span>
             </CardTitle>
             <CardDescription>
-              Send messages, images, and have safe conversations with classmates
+              Browse and connect with other students in your school.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/chat">
-              <Button className="w-full">Open Chat</Button>
+            <Link to="/users">
+              <Button className="w-full">Browse Students</Button>
             </Link>
           </CardContent>
         </Card>
@@ -42,16 +42,16 @@ const Index = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <Users className="h-6 w-6 text-primary" />
-              <span>Find Students</span>
+              <Bell className="h-6 w-6 text-primary" />
+              <span>Notifications</span>
             </CardTitle>
             <CardDescription>
-              Browse and connect with other students in your school
+              View your new messages and direct message requests.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Link to="/users">
-              <Button className="w-full" variant="outline">Browse Students</Button>
+            <Link to="/notifications">
+              <Button className="w-full" variant="outline">View Notifications</Button>
             </Link>
           </CardContent>
         </Card>
@@ -63,7 +63,7 @@ const Index = () => {
               <span>Profile</span>
             </CardTitle>
             <CardDescription>
-              Update your name, avatar and manage your account settings
+              Update your name, avatar, and manage account settings.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -80,13 +80,13 @@ const Index = () => {
           <div className="bg-card p-4 rounded-lg border border-border">
             <h3 className="font-medium mb-2 text-card-foreground">Message Filtering</h3>
             <p className="text-sm text-muted-foreground">
-              All messages are automatically scanned and inappropriate content is filtered out
+              All messages are automatically scanned and inappropriate content is filtered out.
             </p>
           </div>
           <div className="bg-card p-4 rounded-lg border border-border">
             <h3 className="font-medium mb-2 text-card-foreground">Private Conversations</h3>
             <p className="text-sm text-muted-foreground">
-              Only you and your recipient can see your messages. Complete privacy guaranteed
+              Only you and your recipient can see your messages. Complete privacy guaranteed.
             </p>
           </div>
         </div>
