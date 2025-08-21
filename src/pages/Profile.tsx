@@ -186,6 +186,13 @@ const Profile = () => {
 
       if (updateError) throw updateError;
 
+      // Also update the user metadata in the auth session
+      const { error: authUpdateError } = await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl },
+      });
+
+      if (authUpdateError) throw authUpdateError;
+
       setProfile({ ...profile, avatar_url: publicUrl });
       toast({
         title: 'Success',
