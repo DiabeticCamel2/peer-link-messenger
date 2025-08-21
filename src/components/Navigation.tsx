@@ -5,7 +5,8 @@ import {
   MessageCircle, 
   Users, 
   Settings, 
-  LogOut 
+  LogOut,
+  Bell
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +40,11 @@ const Navigation = () => {
       path: '/users',
       label: 'Users',
       icon: Users,
+    },
+    {
+      path: '/notifications',
+      label: 'Notifications',
+      icon: Bell,
     },
     {
       path: '/profile',
