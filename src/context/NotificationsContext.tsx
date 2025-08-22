@@ -54,14 +54,33 @@ export const NotificationsProvider = ({ children }: { children: React.ReactNode 
     if (!user) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch DM requests first
+      const { data: requests, error: requestsError } = await supabase
         .from('dm_requests')
-        .select('id, sender_id, created_at, sender:sender_id(name, avatar_url)')
+        .select('id, sender_id, created_at')
         .eq('recipient_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
-      if (error) throw error;
-      setDmRequests(data || []);
+      
+      if (requestsError) throw requestsError;
+
+      // Fetch sender info separately to work with new RLS policies
+      const requestsWithSender = await Promise.all(
+        (requests || []).map(async (request) => {
+          const { data: sender } = await supabase
+            .from('users')
+            .select('name, avatar_url')
+            .eq('id', request.sender_id)
+            .single();
+          
+          return {
+            ...request,
+            sender: sender || { name: 'Unknown User' }
+          };
+        })
+      );
+
+      setDmRequests(requestsWithSender);
     } catch (error) {
       console.error('Error fetching DM requests:', error);
     } finally {

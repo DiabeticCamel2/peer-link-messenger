@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 interface User {
   id: string;
   name: string;
-  email: string;
+  email?: string; // Made optional since RLS now protects email access
   avatar_url?: string;
   privacy_mode?: boolean;
   request_status?: 'none' | 'pending' | 'sent';
@@ -53,9 +53,11 @@ const Users = () => {
     }
 
     try {
+      // Only fetch basic user info (name, avatar_url) for discovery
+      // Email is now protected by RLS policies
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, name, avatar_url, privacy_mode')
         .neq('id', currentUser.id); // Exclude current user
 
       if (error) throw error;
@@ -92,8 +94,8 @@ const Users = () => {
   };
 
   const filteredUsers = users.filter(user => {
-    const searchMatch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    // Only search by name since email is now protected
+    const searchMatch = user.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     // If user has privacy mode, only show them if search term matches exact full name
     if (user.privacy_mode && searchTerm) {
@@ -228,7 +230,9 @@ const Users = () => {
                     </Avatar>
                     <div>
                       <p className="font-medium text-foreground">{user.name}</p>
-                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                      {user.privacy_mode && (
+                        <p className="text-xs text-muted-foreground">Private user</p>
+                      )}
                     </div>
                   </div>
                   <Button
