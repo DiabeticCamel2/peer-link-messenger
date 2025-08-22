@@ -54,12 +54,10 @@ const Users = () => {
 
     try {
       // Only fetch basic user info (name, avatar_url) for discovery
-      // Email is now protected by RLS policies.
-      // We must explicitly select all columns we need, including ones for filtering,
-      // due to Column Level Security.
+      // Email is now protected by RLS policies
       const { data, error } = await supabase
         .from('users')
-        .select('id, name, avatar_url, privacy_mode, email_confirmed_at')
+        .select('id, name, avatar_url, privacy_mode')
         .neq('id', currentUser.id) // Exclude current user
         .not('email_confirmed_at', 'is', null); // Exclude unverified users
 
