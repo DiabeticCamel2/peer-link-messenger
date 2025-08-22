@@ -1,0 +1,10 @@
+project_id = "xcugvjpmeigrxxrayjwm"
+
+[functions.sanitize-message]
+verify_jwt = true
+
+[functions.search-gifs]
+verify_jwt = true
+
+[functions.dm-request]
+verify_jwt = true
