@@ -283,7 +283,6 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
             image_url: imageUrl,
             image_filename: imageFilename,
             image_size: imageSize,
-            media_type: imageFile ? 'image' : 'text',
           },
         },
       });
