@@ -58,8 +58,7 @@ const Users = () => {
       const { data, error } = await supabase
         .from('users')
         .select('id, name, avatar_url, privacy_mode')
-        .neq('id', currentUser.id) // Exclude current user
-        .not('email_confirmed_at', 'is', null); // Exclude unverified users
+        .neq('id', currentUser.id); // Exclude current user
 
       if (error) throw error;
       setUsers(data || []);
