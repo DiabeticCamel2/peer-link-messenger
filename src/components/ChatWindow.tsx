@@ -219,7 +219,9 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
 
   const handleSendMessage = async () => {
     const messageContent = newMessage.trim();
-    if ((!messageContent && !imageFile) || !currentUser || !recipientId) return;
+    const imageFileToSend = imageFile; // Keep a reference to the file
+
+    if ((!messageContent && !imageFileToSend) || !currentUser || !recipientId) return;
 
     setSending(true);
 
@@ -239,6 +241,8 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
     };
 
     setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+
+    // Reset inputs immediately for a better UX
     setNewMessage('');
     setImageFile(null);
     setImagePreviewUrl(null);
@@ -251,16 +255,16 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
     let imageSize = 0;
 
     try {
-      if (imageFile) {
+      if (imageFileToSend) {
         setUploadingImage(true);
         const conversationId = [currentUser.id, recipientId].sort().join('_');
-        const fileExt = imageFile.name.split('.').pop();
+        const fileExt = imageFileToSend.name.split('.').pop();
         const fileName = `${Date.now()}.${fileExt}`;
         const filePath = `${conversationId}/${currentUser.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('chat-images')
-          .upload(filePath, imageFile);
+          .upload(filePath, imageFileToSend);
 
         if (uploadError) throw uploadError;
 
@@ -270,7 +274,7 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
 
         imageUrl = publicUrl;
         imageFilename = fileName;
-        imageSize = imageFile.size;
+        imageSize = imageFileToSend.size;
         setUploadingImage(false);
       }
 
@@ -283,7 +287,7 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
             image_url: imageUrl,
             image_filename: imageFilename,
             image_size: imageSize,
-            media_type: imageFile ? 'image' : 'text',
+            media_type: imageFileToSend ? 'image' : 'text',
           },
         },
       });
