@@ -24,9 +24,24 @@ serve(async (req) => {
 
   try {
     const { message } = await req.json();
-    const { sender_id, recipient_id, content, media_url, media_type } = message;
+    const {
+      sender_id,
+      recipient_id,
+      content,
+      media_url,
+      media_type,
+      image_url,
+      image_filename,
+      image_size
+    } = message;
 
-    console.log('Processing message:', { sender_id, recipient_id, content: content ? 'has content' : 'no content', media_type });
+    console.log('Processing message:', {
+      sender_id,
+      recipient_id,
+      content: content ? 'has content' : 'no content',
+      media_type,
+      image_url: image_url ? 'has image' : 'no image'
+    });
 
     // Check if recipient has profanity filter enabled
     const { data: userData, error: userError } = await supabase
@@ -96,7 +111,10 @@ serve(async (req) => {
       recipient_id,
       content: filteredContent,
       media_url: media_url || null,
-      media_type: media_type || 'text'
+      media_type: media_type || 'text',
+      image_url: image_url || null,
+      image_filename: image_filename || null,
+      image_size: image_size || null,
     };
     
     console.log('Inserting message:', messageData);

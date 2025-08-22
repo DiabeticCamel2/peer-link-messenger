@@ -6,7 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, ArrowLeft, MessageCircle, Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Send, ArrowLeft, MessageCircle, Loader2, Image, X } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { useNotifications } from '@/context/NotificationsContext';
@@ -25,6 +32,9 @@ interface Message {
   recipient_id: string;
   content: string;
   created_at: string;
+  image_url?: string;
+  image_filename?: string;
+  image_size?: number;
   // The 'sender' is a join from the users table
   sender: User;
 }
@@ -41,6 +51,7 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
   const { setActiveChatRecipientId } = useNotifications();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // State for the component
   const [recipient, setRecipient] = useState<User | null>(null);
@@ -48,6 +59,9 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
 
   // Effect to fetch initial data and set up subscriptions
@@ -205,7 +219,9 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
 
   const handleSendMessage = async () => {
     const messageContent = newMessage.trim();
-    if (!messageContent || !currentUser || !recipientId) return;
+    if ((!messageContent && !imageFile) || !currentUser || !recipientId) return;
+
+    setSending(true);
 
     const optimisticId = `optimistic-${Date.now()}`;
     const optimisticMessage: Message = {
@@ -219,44 +235,103 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
         name: currentUser.user_metadata.name || 'You',
         avatar_url: currentUser.user_metadata.avatar_url,
       },
+      image_url: imagePreviewUrl, // Use preview for optimistic UI
     };
 
-    setSending(true);
     setMessages(prevMessages => [...prevMessages, optimisticMessage]);
     setNewMessage('');
+    setImageFile(null);
+    setImagePreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+
+    let imageUrl = '';
+    let imageFilename = '';
+    let imageSize = 0;
 
     try {
+      if (imageFile) {
+        setUploadingImage(true);
+        const conversationId = [currentUser.id, recipientId].sort().join('_');
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${conversationId}/${currentUser.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('chat-images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('chat-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+        imageFilename = fileName;
+        imageSize = imageFile.size;
+        setUploadingImage(false);
+      }
+
       const { error } = await supabase.functions.invoke('sanitize-message', {
         body: {
           message: {
             sender_id: currentUser.id,
             recipient_id: recipientId,
             content: messageContent,
+            image_url: imageUrl,
+            image_filename: imageFilename,
+            image_size: imageSize,
           },
         },
       });
 
       if (error) {
-        console.error('Message send error:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to send message. Please try again.',
-          variant: 'destructive',
-        });
-        // Rollback the optimistic update
-        setMessages(prevMessages => prevMessages.filter(msg => msg.id !== optimisticId));
+        throw new Error('Failed to send message: ' + error.message);
       }
     } catch (error) {
-      console.error('Message send exception:', error);
+      console.error('Message send error:', error);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred.',
+        description: 'Failed to send message. Please try again.',
         variant: 'destructive',
       });
+      // Rollback the optimistic update
       setMessages(prevMessages => prevMessages.filter(msg => msg.id !== optimisticId));
     } finally {
       setSending(false);
+      setUploadingImage(false);
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select a JPG, PNG, GIF, or WebP image.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image smaller than 5MB.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setImageFile(file);
+    setImagePreviewUrl(URL.createObjectURL(file));
   };
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -320,7 +395,31 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
                           : 'bg-muted'
                       }`}
                     >
-                      <p className="break-words">{message.content}</p>
+                      {message.image_url && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <div className="relative cursor-pointer">
+                              {message.id.startsWith('optimistic-') && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                                  <Loader2 className="h-6 w-6 animate-spin text-white" />
+                                </div>
+                              )}
+                              <img
+                                src={message.image_url}
+                                alt={message.image_filename || 'image'}
+                                className="rounded-lg max-w-full max-h-64 object-cover"
+                              />
+                            </div>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-3xl">
+                            <DialogHeader>
+                              <DialogTitle>{message.image_filename || "Image"}</DialogTitle>
+                            </DialogHeader>
+                            <img src={message.image_url} alt={message.image_filename || 'image'} className="w-full h-auto rounded-lg" />
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      {message.content && <p className="break-words mt-2">{message.content}</p>}
                       <p className="text-xs opacity-70 mt-1 text-right">
                         {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
                       </p>
@@ -340,17 +439,51 @@ const ChatWindow = ({ recipientId, onBack }: ChatWindowProps) => {
         </ScrollArea>
 
         <div className="border-t border-border p-4">
+          {imagePreviewUrl && (
+            <div className="relative mb-4 w-32 h-32">
+              <img src={imagePreviewUrl} alt="Image preview" className="rounded-lg object-cover w-full h-full" />
+              <Button
+                variant="destructive"
+                size="sm"
+                className="absolute top-1 right-1 rounded-full h-6 w-6 p-0"
+                onClick={() => {
+                  setImageFile(null);
+                  setImagePreviewUrl(null);
+                  if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                  }
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           <div className="flex items-center space-x-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/jpeg,image/png,image/gif,image/webp"
+              onChange={handleImageSelect}
+            />
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending || uploadingImage || !currentUser}
+            >
+              <Image className="h-5 w-5" />
+            </Button>
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Type a message..."
-              disabled={sending || !currentUser}
+              placeholder={imageFile ? "Add a caption..." : "Type a message..."}
+              disabled={sending || uploadingImage || !currentUser}
               className="flex-1"
             />
-            <Button onClick={handleSendMessage} disabled={sending || !newMessage.trim() || !currentUser} size="sm" aria-label="Send message">
-              {sending ? (
+            <Button onClick={handleSendMessage} disabled={sending || uploadingImage || (!newMessage.trim() && !imageFile) || !currentUser} size="sm" aria-label="Send message">
+              {sending || uploadingImage ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Send className="h-4 w-4" />
